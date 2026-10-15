@@ -1,19 +1,34 @@
 # benchmark-hundred-step
 
-> Reliability across 25 to 100 dependent steps.
+> Deterministic AI agent benchmark for dependency survival and fault recovery across 25 to 100 tool steps.
 
 Package: https://www.npmjs.com/package/benchmark-hundred-step
 Repository: https://github.com/pooriaarab/benchmark-hundred-step
 Directory: https://aibenchmarkindex.com/benchmarks/benchmark-hundred-step
 
-## Exports
+## Dataset
 
-The root exports `benchmark`, `run`, and `score`. `benchmark-hundred-step/api` exports the fetch-style `handler`. `benchmark-hundred-step/mcp` exports MCP builders.
+There are 24 synthetic episodes: six workflow families at 25, 50, 75, and 100
+steps. Public seed 20261015 selects transient and rollback faults. Regenerate
+with `node scripts/gen-tasks.mjs --seed 20261015 --split public`.
 
-## Commands
+## Grading
 
-The CLI supports list, show, run, score, card, provenance, index-entry, serve, and mcp. Use the mock provider for offline verification.
+The grader replays tool logs. Score weights are survival 60%, final success
+25%, injected-failure recovery 10%, and rollback correctness 5%. No LLM judge
+is used. See docs/grading.md and docs/task-format.md.
+
+## Exports and commands
+
+The root exports `benchmark`, `run`, and `score`.
+`benchmark-hundred-step/api` exports a fetch-style handler.
+`benchmark-hundred-step/mcp` exports MCP builders.
+
+The CLI supports list, show, run, score, card, provenance, index-entry, serve,
+and mcp. Use `run --provider mock --lengths 25` for a free short run. Long runs
+print a cost warning.
 
 ## Verification
 
-Run `npm run ci:local`. The report is `artifacts/e2e-report.json`.
+Run `npm run ci:local`. The gate writes `artifacts/e2e-report.json`, including a
+survival curve by step.
