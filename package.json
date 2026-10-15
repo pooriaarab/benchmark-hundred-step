@@ -47,7 +47,8 @@
   },
   "files": [
     "dist",
-    "data",
+    "data/tasks.jsonl",
+    "data/PROVENANCE.md",
     "docs",
     "README.md",
     "AGENTS.md",
