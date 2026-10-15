@@ -46,7 +46,7 @@ const report = JSON.parse(run.stdout);
 assert.equal(report.rows.length, 24);
 assert.ok(report.rows.some((row) => row.score === 1));
 assert.ok(report.rows.some((row) => row.score === 0));
-const cheap = JSON.parse((await cli("run", "--model", "offline", "--provider", "mock", "--lengths", "25", "--json")).stdout);
+const cheap = JSON.parse((await cli("run", "--provider", "mock", "--lengths", "25", "--json")).stdout);
 assert.equal(cheap.rows.length, 6);
 assert.equal((await cli("list", "--json")).stdout.trim().length > 0, true);
 assert.match((await cli("show", first.id)).stdout, new RegExp(first.id));

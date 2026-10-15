@@ -23,6 +23,8 @@ if (lengthIndex !== -1) {
 }
 if (process.exitCode === undefined) {
   if (args[0] === "run") {
+    const providerIndex = args.indexOf("--provider");
+    if (providerIndex !== -1 && args[providerIndex + 1] === "mock" && !args.includes("--model")) args.push("--model", "offline");
     const chosen = await selected.listTasks();
     if (chosen.some((task) => task.input.length > 25)) {
       console.error("Cost warning: 50-100 step episodes can consume substantial tokens and provider spend.");
