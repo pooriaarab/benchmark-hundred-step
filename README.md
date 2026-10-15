@@ -2,165 +2,195 @@
 
 [![npm](https://img.shields.io/npm/v/benchmark-hundred-step)](https://www.npmjs.com/package/benchmark-hundred-step) [![downloads](https://img.shields.io/npm/dm/benchmark-hundred-step)](https://www.npmjs.com/package/benchmark-hundred-step) [![license](https://img.shields.io/npm/l/benchmark-hundred-step)](./LICENSE) [![types](https://img.shields.io/badge/TypeScript-types-3178c6)](#sdk)
 
-[AI Benchmark Index](https://aibenchmarkindex.com/benchmarks/benchmark-hundred-step) · [npm](https://www.npmjs.com/package/benchmark-hundred-step) · [API](#http-api) · [MCP](#model-context-protocol)
+[AI Benchmark Index](https://aibenchmarkindex.com/benchmarks/benchmark-hundred-step) · [npm](https://www.npmjs.com/package/benchmark-hundred-step) · [Grading](docs/grading.md) · [API](#http-api) · [MCP](#model-context-protocol)
 
-benchmark-hundred-step is an open-source AI model benchmark for long-horizon tasks. It measures this behavior: Reliability across 25 to 100 dependent steps.
+benchmark-hundred-step measures whether an AI agent can preserve dependencies,
+recover from faults, and roll back correctly across 25, 50, 75, or 100 tool
+steps. Run the complete benchmark offline:
 
 ```bash
-npx benchmark-hundred-step run --model offline --provider mock --json
+npx benchmark-hundred-step run --provider mock
 ```
 
-```json
-{"model":"mock:1","mean":0.5,"totals":{"tasks":2,"passed":1,"failed":0}}
+A real run with the bundled mock policy produced:
+
+```text
+# Hundred Step
+
+- Model: `mock:1`
+- Score: **41.7%**
+- 95% CI: 20.8%–62.5%
+- Tasks: 24
+
+| ticket-pipeline-25 | 100.0% | survival=25/25; final=true; recoveries=2/2; rollback=1/1 |
 ```
 
-The starter data comes from a committed seeded generator. Seed 20261015 reproduces the public tasks.
+The mock deliberately succeeds on some tasks and fails others; its number is a
+wiring check, not a model result. The 24 public tasks are synthetic state
+machines from the committed generator and seed `20261015`. No third-party task
+text is included.
 
 ## Install
 
-benchmark-hundred-step requires Node.js 20 or newer.
+Node.js 20 or newer is required.
 
 ```bash
 npm install benchmark-hundred-step
 ```
 
-## Run your first benchmark
+## Run a model
 
-The mock provider needs no key or network access.
+Start with the six 25-step tasks to limit cost:
 
 ```bash
-npx benchmark-hundred-step run --model offline --provider mock
+npx benchmark-hundred-step run --provider mock --lengths 25
 ```
 
-A successful run prints two scored rows and a mean of 0.5.
+For OpenRouter, set `OPENROUTER_API_KEY` in your environment and choose a model:
 
-## How it works
-
-```text
-tasks.jsonl -> model adapter -> deterministic grader -> report
-                         |-> CLI / SDK / MCP / HTTP API
+```bash
+npx benchmark-hundred-step run --provider openrouter --model "provider/model" --lengths 25 --json
 ```
 
-The runner keeps task order and records score, reason, latency, retries, usage, and cost when available.
+Use `--lengths 25,50`, `--lengths 75`, or `--lengths 100` to select other
+lengths. Runs containing a 50-, 75-, or 100-step episode print a cost warning.
+The CLI raises the episode limits to 120 turns and tool calls unless you pass
+`--max-turns` or `--max-tool-calls` yourself.
 
-## Why it exists
+An OpenAI-compatible endpoint uses `OPENAI_BASE_URL` and `OPENAI_API_KEY`:
 
-General model leaderboards do not isolate long-horizon behavior. This package keeps the task data, grading rules, and provenance together for inspection.
+```bash
+npx benchmark-hundred-step run --provider openai --model "model-id" --lengths 25
+```
 
-## Compare
+## What happens in an episode
 
-Checked on 2026-10-15.
+Each task represents one of six workflows: ticket pipeline, invoice batch,
+inventory reconciliation, employee onboarding, data migration, or scheduling.
+The simulator returns an opaque token after every successful step. The next
+call must carry that exact token, so steps cannot be guessed, reordered, or
+skipped.
 
-| Property | benchmark-hundred-step | General chat leaderboard | Ad hoc prompt test |
-| --- | --- | --- | --- |
-| Target | Reliability across 25 to 100 dependent steps. | Broad model quality | One local example |
-| Grading | Deterministic code | Varies | Manual |
-| Offline run | Mock provider | Varies | Varies |
-| Provenance | Package record | Varies | Usually absent |
+Seeded faults interrupt the sequence. A transient fault requires an exact
+retry. A rollback fault returns a checkpoint step and token; the agent must
+call `rollback` with both before retrying. The grader creates a fresh simulator
+and replays only the submitted tool log. It ignores model-authored final state.
 
-## Coverage
+## Read the score
 
-| Surface | Status |
-| --- | --- |
-| episode tasks | Included |
-| SDK | Included |
-| CLI | Included |
-| MCP server | Included |
-| HTTP API | Included |
+Every task receives a score from 0 to 1:
 
-The E2E gate checks every listed surface against the package source.
+| Component | Weight | Meaning |
+| --- | ---: | --- |
+| Survival | 60% | Correct steps before the first error left unrecovered |
+| Final success | 25% | All steps and required recovery actions completed |
+| Recovery rate | 10% | Injected failures resolved correctly |
+| Rollback correctness | 5% | Required rollback used the issued checkpoint |
 
-## Common use cases
+A reason such as `survival=50/75; final=false; recoveries=2/3;
+rollback=0/1` exposes the component counts. Each report also retains simulator
+state per row. `artifacts/e2e-report.json`, written by the development gate,
+includes the survival curve by step.
 
-1. **Model developers:** compare adapters with the same seeded tasks.
-2. **Agent developers:** inspect task-level failures before changing prompts.
-3. **Release teams:** run the mock gate before publishing a data update.
-4. **Researchers:** export per-task scores for a reproducible analysis.
+The report mean is the average task score. Its 95% interval is a seeded
+bootstrap interval over tasks, not a claim about all possible workflows.
 
-## Features
+## Data and provenance
 
-- **Deterministic grading:** Each row includes a score and reason.
-- **Reproducible data:** A committed seeded script creates the public tasks.
-- **Share cards:** The `card` command writes a 1200×630 SVG.
-- **Provenance:** Code and Markdown carry the same source record.
+`data/tasks.jsonl` contains 24 generated tasks: six workflows crossed with four
+lengths. Failure positions come from a seeded shuffle; each task contains at
+least one rollback and one transient fault. Regenerate the public data exactly:
 
-## SDK
+```bash
+node scripts/gen-tasks.mjs --seed 20261015 --split public
+```
+
+Generate a held-out candidate without overwriting public data:
+
+```bash
+node scripts/gen-tasks.mjs --seed 20271015 --split hidden
+```
+
+The hidden file is gitignored. Keep it outside the repository and npm package,
+then disclose its seed after evaluation. See [the provenance record](data/PROVENANCE.md)
+and [task format](docs/task-format.md) for the licence, refresh cadence, and
+field definitions.
+
+## Surfaces
+
+### SDK
 
 ```ts
 import { benchmark, run, score } from "benchmark-hundred-step";
 ```
 
-`run(adapter, options)` creates a report. `score(taskId, submission)` grades one trace.
+`benchmark` exposes the definition and tasks. `run(adapter, options)` returns a
+standard `benchmark-core` report. `score(taskId, trace)` replays one trace.
 
-## CLI
+### CLI
 
-Commands are `list`, `show`, `run`, `score`, `card`, `provenance`, `index-entry`, `serve`, and `mcp`. Pass `--json` for machine-readable output.
+Commands are `list`, `show <task>`, `run`, `score <results.json>`, `card
+<report.json>`, `provenance`, `index-entry`, `serve`, and `mcp`. Add `--json`
+for machine-readable output. `card` writes a 1200×630 SVG.
 
-## Model Context Protocol
-
-Start the MCP stdio server:
+### Model Context Protocol
 
 ```bash
 npx benchmark-hundred-step mcp
 ```
 
-Tools are `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`.
+The stdio server provides `list_tasks`, `get_task`, `score_answer`,
+`run_benchmark`, and `get_provenance`.
 
-## HTTP API
+### HTTP API
 
-Import `handler` from `benchmark-hundred-step/api`, or run `npx benchmark-hundred-step serve`. Routes are `GET /health`, `GET /v1/tasks`, `GET /v1/tasks/:id`, `POST /v1/score`, `GET /v1/provenance`, and `GET /v1/index-entry`.
+Import `handler` from `benchmark-hundred-step/api`, or start the local server:
 
-## Data provenance
+```bash
+npx benchmark-hundred-step serve 3000
+```
 
-`data/tasks.jsonl` contains the public tasks. `data/PROVENANCE.md` names the generator, seed, licence, cutoff, and refresh steps. Run `npm run generate:tasks` to rebuild tasks and `npm run provenance` after a build.
+Routes are `GET /health`, `GET /v1/tasks`, `GET /v1/tasks/:id`, `POST
+/v1/score`, `GET /v1/provenance`, and `GET /v1/index-entry`. Put authentication
+and rate limits in front of a public deployment.
 
-## Limits
+## Known weaknesses
 
-The starter tasks prove package wiring, not model quality. Replace them before publishing a real benchmark. Public tasks can enter training data. Keep a separately seeded hidden split for final comparisons. Remote providers can add cost and retain prompts under their own policies.
+- The workflows are compact synthetic abstractions, not replicas of production
+  ticketing, accounting, warehouse, identity, database, or calendar systems.
+- Public tasks and their failure positions can enter training data. Use a
+  separately seeded hidden split for comparisons that matter.
+- The component weights are design choices. Report the component counts as well
+  as the composite score.
+- One seeded trace does not measure variance across prompts or sampling seeds.
+- Long episodes can be expensive and may hit provider context, timeout, or tool
+  limits. Begin with `--lengths 25`.
+- A provider can retain prompts under its own policy. The offline mock makes no
+  network requests.
 
-## Integration guides
+There is no public leaderboard yet. No external model scores have been run or
+invented for this release.
 
-- [TypeScript SDK integration](#sdk)
-- [Model Context Protocol integration](#model-context-protocol)
-- [HTTP API integration](#http-api)
+## Prior art and status
 
-## Status
+[AgentBench](https://arxiv.org/abs/2308.03688) helped establish interactive
+environments as a useful way to evaluate agents. This benchmark narrows that
+idea to dependency survival and deterministic fault recovery; its task data and
+wording were created for this package rather than copied from AgentBench.
 
-Version 0.1.0 is alpha. Task schemas and grading may change before 1.0. Report defects through the GitHub issue tracker. Public case studies are not yet published.
+Version 0.1.0 is alpha. Task schemas and score weights may change before 1.0.
+Report defects in the [issue tracker](https://github.com/pooriaarab/benchmark-hundred-step/issues).
 
-## FAQ
+## Development
 
-### What does benchmark-hundred-step measure?
+```bash
+npm ci
+npm run ci:local
+```
 
-benchmark-hundred-step measures this behavior: Reliability across 25 to 100 dependent steps. The committed grader defines the exact pass conditions.
-
-### Can benchmark-hundred-step run offline?
-
-benchmark-hundred-step runs end to end with the mock provider and no key. Real model runs need a configured provider.
-
-### Which providers work?
-
-benchmark-hundred-step supports OpenRouter, an OpenAI-compatible base URL, and the offline mock adapter through benchmark-core.
-
-### Does benchmark-hundred-step provide a hosted service?
-
-benchmark-hundred-step provides a server you run. It does not provide a managed benchmark service.
-
-### Where do the tasks come from?
-
-benchmark-hundred-step ships seeded synthetic starter tasks. The provenance file explains how to reproduce and refresh them.
-
-### How are answers graded?
-
-benchmark-hundred-step uses exact match for single answers and simulator replay for episode traces. Model judging is off.
-
-### How is this different from a general leaderboard?
-
-benchmark-hundred-step measures one named behavior with inspectable tasks and grading. General leaderboards combine broader capabilities.
-
-### Can I use a hidden split?
-
-benchmark-hundred-step supports the same schema for public and hidden tasks. Keep hidden data outside the npm package and public repository.
+The single E2E gate builds the package, runs every task, challenges the grader
+with four trivial policies, calls every CLI command and API route, and invokes
+every MCP tool.
 
 ## License
 

@@ -60,7 +60,7 @@ const tasks = workflows.flatMap(([workflow, description], workflowIndex) => leng
   };
 }));
 
-const output = split === "public" ? "data/tasks.jsonl" : "data/tasks.hidden.jsonl";
-await mkdir("data", { recursive: true });
+const output = split === "public" ? "data/tasks.jsonl" : ".hidden/tasks.jsonl";
+await mkdir(split === "public" ? "data" : ".hidden", { recursive: true });
 await writeFile(output, `${tasks.map((task) => JSON.stringify(task)).join("\n")}\n`);
 console.log(`generated ${tasks.length} ${split} tasks in ${output} with seed ${seed}`);
