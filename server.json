@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.pooriaarab/benchmark-hundred-step",
+  "description": "Reliability across 25 to 100 dependent steps.",
+  "version": "0.1.0",
+  "repository": { "url": "https://github.com/pooriaarab/benchmark-hundred-step", "source": "github" },
+  "packages": [{
+    "registryType": "npm", "registryBaseUrl": "https://registry.npmjs.org", "identifier": "benchmark-hundred-step", "version": "0.1.0",
+    "transport": { "type": "stdio" }, "runtimeHint": "npx",
+    "packageArguments": [{ "type": "positional", "valueHint": "subcommand", "value": "mcp" }]
+  }]
+}
