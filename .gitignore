@@ -4,3 +4,4 @@ artifacts/
 *.tgz
 
 .hidden/
+data/tasks.hidden.jsonl
