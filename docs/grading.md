@@ -12,11 +12,11 @@ recovery twice, trusts a model-authored final state, or changes with replay
 seed. It can also overreward an agent that stops early if completion dominates
 the partial-progress metric.
 
-The E2E gate must therefore replay complete traces and challenge the grader
+The E2E gate therefore replays complete traces and challenge the grader
 with empty, random, always-yes, and repeated identical calls. Complete traces
 must score high; every trivial strategy must score below 0.2.
 
-## Planned metrics
+## Metrics
 
 - **Survival:** correctly completed steps before the first error left
   unrecovered, divided by task length.
