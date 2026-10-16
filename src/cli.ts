@@ -1,11 +1,22 @@
 #!/usr/bin/env node
-import { createCli } from "benchmark-core";
-import { benchmark, withLengths } from "./benchmark.js";
+import { createCli, type Benchmark } from "benchmark-core";
+import { benchmark, createBenchmark, withLengths, type WorkflowTask } from "./benchmark.js";
 
 const args = process.argv.slice(2);
+let selected: Benchmark<WorkflowTask> = benchmark;
+const tasksIndex = args.indexOf("--tasks");
+if (tasksIndex !== -1) {
+  const path = args[tasksIndex + 1];
+  if (!path || path.startsWith("--")) {
+    console.error("--tasks needs a JSONL task file path.");
+    process.exitCode = 1;
+  } else {
+    selected = createBenchmark(path);
+    args.splice(tasksIndex, 2);
+  }
+}
 const lengthIndex = args.indexOf("--lengths");
-let selected = benchmark;
-if (lengthIndex !== -1) {
+if (process.exitCode === undefined && lengthIndex !== -1) {
   const raw = args[lengthIndex + 1];
   if (!raw) {
     console.error("--lengths needs a comma-separated list containing 25, 50, 75, or 100.");
@@ -16,7 +27,7 @@ if (lengthIndex !== -1) {
       console.error("--lengths accepts only 25, 50, 75, or 100.");
       process.exitCode = 1;
     } else {
-      selected = withLengths(lengths);
+      selected = withLengths(lengths, selected);
       args.splice(lengthIndex, 2);
     }
   }

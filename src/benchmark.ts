@@ -3,6 +3,7 @@ import {
   defineBenchmark,
   replay,
   type Benchmark,
+  type BenchmarkDefinition,
   type Environment,
   type JsonValue,
   type Task,
@@ -36,7 +37,6 @@ export type WorkflowState = {
   requiredRollbacks: number;
   unresolvedStep: number | null;
 };
-
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -49,8 +49,10 @@ function isWorkflowTask(value: unknown): value is WorkflowTask {
     failures.every((failure) => object(failure) && Number.isInteger(failure.step) &&
       (failure.kind === "transient" || failure.kind === "rollback"));
 }
-async function loadTasks(): Promise<WorkflowTask[]> {
-  const text = await readFile(new URL("../data/tasks.jsonl", import.meta.url), "utf8");
+async function loadTasks(tasksPath?: string): Promise<WorkflowTask[]> {
+  const text = tasksPath === undefined
+    ? await readFile(new URL("../data/tasks.jsonl", import.meta.url), "utf8")
+    : await readFile(tasksPath, "utf8");
   return text.trim().split("\n").map((line) => {
     const task: unknown = JSON.parse(line);
     if (!isWorkflowTask(task)) throw new Error("Invalid workflow task data.");
@@ -109,17 +111,12 @@ export class WorkflowEnvironment implements Environment<WorkflowTask> {
     if (name === "rollback") return this.#rollback(args);
     if (name !== "advance") return error("UNKNOWN_TOOL", `Unknown tool: ${name}`);
     const expectedStep = this.#completed + 1;
+    if (expectedStep > task.input.length) {
+      return error("WORKFLOW_COMPLETE", `All ${task.input.length} steps are already complete; stop calling tools.`);
+    }
     if (args.step !== expectedStep || args.token !== this.#token) {
       this.#pending ??= { step: expectedStep, kind: "transient", token: this.#token, rollbackDone: true, injected: false };
-      return error("DEPENDENCY_MISMATCH", `Expected step ${expectedStep} with token ${this.#token}.`);
-    }
-    if (this.#pending) {
-      if (this.#pending.kind === "rollback" && !this.#pending.rollbackDone) {
-        return error("ROLLBACK_REQUIRED", `Call rollback at checkpoint ${this.#completed} with token ${this.#token}.`);
-      }
-      if (this.#pending.injected) this.#recoveries++;
-      this.#pending = undefined;
-      return this.#completeStep(task, expectedStep);
+      return error("DEPENDENCY_MISMATCH", `Expected step ${expectedStep} with the token returned by the previous successful step.`);
     }
     const failure = task.metadata.failures.find((item) => item.step === expectedStep);
     if (failure && !this.#injected.has(expectedStep)) {
@@ -129,6 +126,13 @@ export class WorkflowEnvironment implements Environment<WorkflowTask> {
         ? `Call rollback at checkpoint ${this.#completed} with token ${this.#token}.`
         : `Transient fault at step ${expectedStep}; retry with the same token.`;
       return error(failure.kind === "rollback" ? "ROLLBACK_REQUIRED" : "TRANSIENT", message);
+    }
+    if (this.#pending) {
+      if (this.#pending.kind === "rollback" && !this.#pending.rollbackDone) {
+        return error("ROLLBACK_REQUIRED", `Call rollback at checkpoint ${this.#completed} with token ${this.#token}.`);
+      }
+      if (this.#pending.injected) this.#recoveries++;
+      this.#pending = undefined;
     }
     return this.#completeStep(task, expectedStep);
   }
@@ -184,7 +188,7 @@ function scriptedCalls(task: WorkflowTask) {
   return calls;
 }
 
-export const benchmark = defineBenchmark<WorkflowTask>({
+const definition: Omit<BenchmarkDefinition<WorkflowTask>, "loadTasks"> = {
   id: "benchmark-hundred-step",
   name: "Hundred Step",
   tagline: "Reliability across 25 to 100 dependent steps.",
@@ -193,7 +197,6 @@ export const benchmark = defineBenchmark<WorkflowTask>({
   whatItMeasures: "Whether an agent preserves dependencies and recovers correctly across 25, 50, 75, and 100 workflow steps.",
   version: "0.1.0",
   status: "alpha",
-  loadTasks,
   async grade(task, submission: Trace, context) {
     const state = await replay(new WorkflowEnvironment(), task, submission.toolLog ?? [], context.seed) as WorkflowState;
     if (state.completedSteps === 0) return { score: 0, reason: `survival=0/${state.totalSteps}; no valid progress`, details: state };
@@ -201,11 +204,12 @@ export const benchmark = defineBenchmark<WorkflowTask>({
     const survival = survivalSteps / state.totalSteps;
     const recoveryRate = state.expectedRecoveries === 0 ? 1 : state.recoveries / state.expectedRecoveries;
     const rollbackRate = state.requiredRollbacks === 0 ? 1 : state.rollbackCorrect / state.requiredRollbacks;
-    const score = 0.6 * survival + 0.25 * Number(state.finalSuccess) + 0.1 * recoveryRate + 0.05 * rollbackRate;
+    const finished = Number(state.finalSuccess);
+    const score = (state.finalSuccess ? 1 : survival) * (0.6 * survival + 0.1 * recoveryRate + 0.05 * rollbackRate) + 0.25 * finished;
     return {
       score: Math.max(0, Math.min(1, score)),
       reason: `survival=${survivalSteps}/${state.totalSteps}; final=${state.finalSuccess}; recoveries=${state.recoveries}/${state.expectedRecoveries}; rollback=${state.rollbackCorrect}/${state.requiredRollbacks}`,
-      details: { ...state, survival },
+      details: { ...state, survival, survivalSteps },
     };
   },
   environment: () => new WorkflowEnvironment(),
@@ -219,21 +223,27 @@ export const benchmark = defineBenchmark<WorkflowTask>({
     url: "https://github.com/pooriaarab/benchmark-hundred-step/blob/main/scripts/gen-tasks.mjs",
     licence: "MIT",
     howToGet: "Run `node scripts/gen-tasks.mjs --seed 20261015 --split public` from the repository root.",
-    retrievedAt: "2026-10-15T00:00:00.000Z",
-    contaminationNotes: "The 24 public tasks use seed 20261015. For final comparisons, generate seed 20271015 with `--split hidden`, keep the resulting file out of the repository and npm package, and disclose the seed after evaluation.",
+    retrievedAt: "2026-10-16T00:00:00.000Z",
+    contaminationNotes: "The 24 public tasks use seed 20261015. For final comparisons, generate a held-out split with `--split hidden` and a private `--seed` you never commit or publish; disclose the seed only after evaluation.",
     refresh: "Regenerate annually or after simulator changes, review the JSONL diff, and publish a versioned release.",
   }],
-  gradingMethod: "Deterministic tool-log replay combining survival (60%), final success (25%), injected-failure recovery (10%), and rollback correctness (5%).",
-});
+  gradingMethod: "Deterministic tool-log replay combining survival (60%), final success (25%), injected-failure recovery (10%), and rollback correctness (5%); unfinished episodes earn survival-proportional partial credit.",
+};
 
-export function withLengths(lengths: ReadonlySet<number>): Benchmark<WorkflowTask> {
+export function createBenchmark(tasksPath?: string): Benchmark<WorkflowTask> {
+  return defineBenchmark<WorkflowTask>({ ...definition, loadTasks: () => loadTasks(tasksPath) });
+}
+
+export const benchmark = createBenchmark();
+
+export function withLengths(lengths: ReadonlySet<number>, base: Benchmark<WorkflowTask> = benchmark): Benchmark<WorkflowTask> {
   return {
-    definition: benchmark.definition,
-    async listTasks() { return (await benchmark.listTasks()).filter((task) => lengths.has(task.input.length)); },
+    definition: base.definition,
+    async listTasks() { return (await base.listTasks()).filter((task) => lengths.has(task.input.length)); },
     async getTask(id) {
-      const task = await benchmark.getTask(id);
+      const task = await base.getTask(id);
       return task && lengths.has(task.input.length) ? task : undefined;
     },
-    score: (task, submission, context) => benchmark.score(task, submission, context),
+    score: (task, submission, context) => base.score(task, submission, context),
   };
 }
