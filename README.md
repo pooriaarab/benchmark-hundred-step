@@ -23,6 +23,12 @@ A real run with the bundled mock policy produced:
 - Tasks: 24
 
 | ticket-pipeline-25 | 100.0% | survival=25/25; final=true; recoveries=2/2; rollback=1/1 |
+
+## Breakdown by length
+
+| Length | Tasks | Finished | Mean score | Mean survival |
+| ---: | ---: | ---: | ---: | ---: |
+| 25 | 6 | 2 | 33.3% | 33.3% |
 ```
 
 The mock deliberately succeeds on some tasks and fails others; its number is a
@@ -54,8 +60,16 @@ npx benchmark-hundred-step run --provider openrouter --model "provider/model" --
 
 Use `--lengths 25,50`, `--lengths 75`, or `--lengths 100` to select other
 lengths. Runs containing a 50-, 75-, or 100-step episode print a cost warning.
-The CLI raises the episode limits to 120 turns and tool calls unless you pass
-`--max-turns` or `--max-tool-calls` yourself.
+Episode limits scale with the longest selected task: `maxTurns` and
+`maxToolCalls` default to the length plus 32, and the per-episode timeout to
+four seconds per allowed turn, so a 100-step run gets 132 of each and 528 s.
+Pass `--max-turns`, `--max-tool-calls`, or `--timeout` to override.
+
+To evaluate against a held-out split file, pass `--tasks`:
+
+```bash
+npx benchmark-hundred-step run --provider mock --tasks .hidden/tasks.jsonl
+```
 
 An OpenAI-compatible endpoint uses `OPENAI_BASE_URL` and `OPENAI_API_KEY`:
 
@@ -78,8 +92,11 @@ skipped.
 
 Seeded faults interrupt the sequence. A transient fault requires an exact
 retry. A rollback fault returns a checkpoint step and token; the agent must
-call `rollback` with both before retrying. The grader creates a fresh simulator
-and replays only the submitted tool log. It ignores model-authored final state.
+call `rollback` with both before retrying. Faults fire even if the agent
+probes with a wrong call first, and dependency errors never reveal the
+expected token, so tokens can only come from tool results. The grader creates
+a fresh simulator and replays only the submitted tool log. It ignores
+model-authored final state.
 
 ## Why it exists
 
@@ -145,8 +162,10 @@ Every task receives a score from 0 to 1:
 
 A reason such as `survival=50/75; final=false; recoveries=2/3;
 rollback=0/1` exposes the component counts. Each report also retains simulator
-state per row. `artifacts/e2e-report.json`, written by the development gate,
-includes the survival curve by step.
+state per row, and every `run` or `score` report carries a `breakdown` with a
+survival curve by step and a per-length table; the CLI prints both. Episodes
+that never finish multiply their non-final components by survival again, so
+partial credit decays quadratically with progress.
 
 The report mean is the average task score. Its 95% interval is a seeded
 bootstrap interval over tasks, not a claim about all possible workflows.
@@ -161,14 +180,17 @@ least one rollback and one transient fault. Regenerate the public data exactly:
 node scripts/gen-tasks.mjs --seed 20261015 --split public
 ```
 
-Generate a held-out candidate without overwriting public data:
+Generate a held-out candidate without overwriting public data. The hidden
+split needs an explicit seed that you choose and keep private:
 
 ```bash
-node scripts/gen-tasks.mjs --seed 20271015 --split hidden
+node scripts/gen-tasks.mjs --seed <your-private-seed> --split hidden
 ```
 
-The hidden file is gitignored. Keep it outside the repository and npm package,
-then disclose its seed after evaluation. See [the provenance record](data/PROVENANCE.md)
+Hidden tasks get `hs-` prefixed ids, different workflow names and prompt
+wording, seed-shuffled order, and land in `.hidden/`, which is gitignored,
+outside `data/`, and excluded from the npm package. Disclose the seed only
+after evaluation. See [the provenance record](data/PROVENANCE.md)
 and [task format](docs/task-format.md) for the licence, refresh cadence, and
 field definitions.
 
@@ -244,7 +266,9 @@ wording were created for this package rather than copied from AgentBench.
 
 ## Status
 
-Version 0.1.0 is alpha. Task schemas and score weights may change before 1.0.
+Version 0.2.0 is alpha. It fixes grader defects found in review, so 0.2.0
+scores are not comparable with 0.1.0 scores; see [CHANGELOG.md](CHANGELOG.md).
+Task schemas and score weights may change before 1.0.
 Report defects in the [issue tracker](https://github.com/pooriaarab/benchmark-hundred-step/issues).
 Public case studies are not yet published.
 
@@ -256,8 +280,8 @@ npm run ci:local
 ```
 
 The single E2E gate builds the package, runs every task, challenges the grader
-with four trivial policies, calls every CLI command and API route, and invokes
-every MCP tool.
+with nine trivial policies, verifies a private-seed hidden split, calls every
+CLI command and API route, and invokes every MCP tool.
 
 ## FAQ
 
@@ -298,9 +322,9 @@ AgentBench covers broader agent ability across several environments.
 
 ### Can benchmark-hundred-step use a hidden split?
 
-benchmark-hundred-step generates a gitignored hidden candidate with `--split
-hidden`. Keep that file outside the published package and disclose its seed
-after evaluation.
+benchmark-hundred-step generates a gitignored hidden split with `--split
+hidden` and a seed you supply and keep private. Run it with `--tasks`; the
+file stays outside the published package.
 
 ### Is there a public leaderboard?
 
