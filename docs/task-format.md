@@ -1,16 +1,23 @@
 # Task format
 
 Each JSONL row is an episode with a stable ID such as
-`inventory-reconciliation-75`.
+`inventory-reconciliation-75`. Hidden-split rows carry an `hs-` prefix such
+as `hs-crew-rostering-75`.
 
 - `prompt` tells the agent the step count and recovery protocol.
 - `input.workflow` names the workflow family.
 - `input.length` is 25, 50, 75, or 100.
 - `input.initialToken` starts the dependency chain.
+- `expected.completedSteps` is the full length; `expected.terminalToken` is
+  the token a complete episode ends on.
 - `metadata.seed` selects the task's deterministic tokens and failures.
 - `metadata.split` records `public` or `hidden`.
 - `metadata.failures` lists injected step numbers and either `transient` or
   `rollback` behavior.
+
+Run a split file with `--tasks <path>` on the CLI (`run`, `score`, `list`,
+`show`, `serve`, and `mcp` all honor it), or `tasksPath` in the SDK `run` and
+`score` calls.
 
 ## Tools
 

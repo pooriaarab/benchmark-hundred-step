@@ -288,7 +288,7 @@ const definition: Omit<BenchmarkDefinition<WorkflowTask>, "loadTasks"> = {
   tags: ["helpful"],
   category: "long-horizon",
   whatItMeasures: "Whether an agent preserves dependencies and recovers correctly across 25, 50, 75, and 100 workflow steps.",
-  version: "0.1.0",
+  version: "0.2.0",
   status: "alpha",
   async grade(task, submission: Trace, context) {
     const state = await replay(new WorkflowEnvironment(), task, submission.toolLog ?? [], context.seed) as WorkflowState;

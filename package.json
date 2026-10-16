@@ -1,6 +1,6 @@
 {
   "name": "benchmark-hundred-step",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI agent benchmark for deterministic long-horizon workflow reliability across 25 to 100 dependent tool steps.",
   "keywords": [
     "ai-benchmark",
@@ -51,6 +51,7 @@
     "data/PROVENANCE.md",
     "docs",
     "README.md",
+    "CHANGELOG.md",
     "AGENTS.md",
     "llms.txt",
     "server.json",
