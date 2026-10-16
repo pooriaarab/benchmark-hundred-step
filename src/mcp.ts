@@ -9,7 +9,7 @@ import {
   type Benchmark,
   type ModelAdapter,
 } from "benchmark-core";
-import { benchmark, createBenchmark, runTasks, type WorkflowTask } from "./benchmark.js";
+import { benchmark, runTasks, type WorkflowTask } from "./benchmark.js";
 
 const tools = [
   { name: "list_tasks", description: "List benchmark task ids and prompts.", inputSchema: { type: "object", properties: {}, additionalProperties: false } },
@@ -17,13 +17,12 @@ const tools = [
   { name: "score_answer", description: "Score a trace with the deterministic benchmark grader.", inputSchema: { type: "object", properties: { taskId: { type: "string" }, submission: { type: "object" }, seed: { type: "number" } }, required: ["taskId", "submission"], additionalProperties: false } },
   {
     name: "run_benchmark",
-    description: "Run every task through a model provider with episode limits sized to the task length.",
+    description: "Run every task through a model provider with episode limits sized to the task length. Task files are chosen when the server starts.",
     inputSchema: {
       type: "object",
       properties: {
         model: { type: "string" },
         provider: { type: "string", enum: ["openrouter", "openai", "mock"] },
-        tasksPath: { type: "string" },
       },
       required: ["model"],
       additionalProperties: false,
@@ -67,8 +66,7 @@ export function createMcpServer(bench: Benchmark<WorkflowTask> = benchmark) {
       if (request.params.name === "run_benchmark") {
         if (typeof input.model !== "string") return content({ error: "model is required." }, true);
         const provider = typeof input.provider === "string" ? input.provider : "openrouter";
-        const selected = typeof input.tasksPath === "string" ? createBenchmark(input.tasksPath) : bench;
-        return content(await runTasks(selected, adapter(provider, input.model, selected, 1)));
+        return content(await runTasks(bench, adapter(provider, input.model, bench, 1)));
       }
       if (request.params.name === "get_provenance") return content({ provenance: bench.definition.provenance });
       return content({ error: `Unknown tool: ${request.params.name}` }, true);
