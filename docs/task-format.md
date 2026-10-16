@@ -15,9 +15,9 @@ as `hs-crew-rostering-75`.
 - `metadata.failures` lists injected step numbers and either `transient` or
   `rollback` behavior.
 
-Run a split file with `--tasks <path>` on the CLI, `tasksPath` in the SDK
-`run`/`score`, `serve --tasks <path>` for the API, or `tasksPath` on the MCP
-`run_benchmark` tool.
+Run a split file with `--tasks <path>` on the CLI (`run`, `score`, `list`,
+`show`, `serve`, and `mcp` all honor it), or `tasksPath` in the SDK `run` and
+`score` calls.
 
 ## Tools
 
