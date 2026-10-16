@@ -24,9 +24,9 @@ What changed:
   unusable 60 s / 12-turn / 24-call defaults.
 - Run reports on every surface (SDK, CLI, MCP, and JSON output) now include a
   `breakdown` with a survival curve by step and a per-length table.
-- Added `--tasks <file>` to the CLI, `tasksPath` to the SDK `run`/`score`, a
-  `tasksPath` argument to MCP `run_benchmark`, and `createApiHandler` for
-  serving a generated split file such as a held-out set.
+- Added `--tasks <file>` to the CLI (including `serve` and `mcp` for the API
+  and MCP surfaces), `tasksPath` to the SDK `run`/`score`, and
+  `createApiHandler` for embedding a split file such as a held-out set.
 - Hidden split generation requires an explicit private `--seed` (the published
   0.1.0 default seed is retired), emits `hs-` prefixed ids, different workflow
   names and prompt wording, seed-shuffled order, and lands outside `data/` and
