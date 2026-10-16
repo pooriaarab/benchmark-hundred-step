@@ -1,25 +1,8 @@
-import type { ModelAdapter, RunOptions, Trace } from "benchmark-core";
-import { benchmark, createBenchmark, runTasks } from "./benchmark.js";
+import { run as runBenchmark, type ModelAdapter, type RunOptions, type Trace } from "benchmark-core";
+import { benchmark, createBenchmark } from "./benchmark.js";
 
-export {
-  benchmark,
-  createBenchmark,
-  withLengths,
-  limitsForLength,
-  limitsForTasks,
-  breakdownFor,
-  breakdownMarkdown,
-  runTasks,
-  WorkflowEnvironment,
-} from "./benchmark.js";
-export type {
-  LengthBreakdown,
-  SurvivalPoint,
-  WorkflowBreakdown,
-  WorkflowReport,
-  WorkflowState,
-  WorkflowTask,
-} from "./benchmark.js";
+export { benchmark, createBenchmark, withLengths, WorkflowEnvironment } from "./benchmark.js";
+export type { WorkflowState, WorkflowTask } from "./benchmark.js";
 
 export type WorkflowRunOptions = RunOptions & {
   /** Path to an alternate JSONL task file, for example a generated hidden split. */
@@ -29,7 +12,7 @@ export type WorkflowRunOptions = RunOptions & {
 export const run = (adapter: ModelAdapter, options?: WorkflowRunOptions) => {
   const { tasksPath, ...rest } = options ?? {};
   const selected = tasksPath === undefined ? benchmark : createBenchmark(tasksPath);
-  return runTasks(selected, adapter, rest);
+  return runBenchmark(selected, adapter, rest);
 };
 
 export async function score(taskId: string, submission: Trace, options?: { tasksPath?: string }) {
