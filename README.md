@@ -1,5 +1,7 @@
 # benchmark-hundred-step
 
+Paper: [10.5281/zenodo.23752401](https://doi.org/10.5281/zenodo.23752401)
+
 [![npm](https://img.shields.io/npm/v/benchmark-hundred-step)](https://www.npmjs.com/package/benchmark-hundred-step) [![downloads](https://img.shields.io/npm/dm/benchmark-hundred-step)](https://www.npmjs.com/package/benchmark-hundred-step) [![license](https://img.shields.io/npm/l/benchmark-hundred-step)](./LICENSE) [![types](https://img.shields.io/badge/TypeScript-types-3178c6)](#sdk)
 
 [AI Benchmark Index](https://private-repo-337e.com/benchmarks/benchmark-hundred-step) · [npm](https://www.npmjs.com/package/benchmark-hundred-step) · [Grading](docs/grading.md) · [API](#http-api) · [MCP](#model-context-protocol) · [llms.txt](llms.txt)
