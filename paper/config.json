@@ -1,0 +1,14 @@
+{
+  "title": "Hundred Step: Dependency Preservation and Recovery in Long Workflows",
+  "orcid": "https://orcid.org/0009-0005-9964-6841",
+  "keywords": [
+    "long-horizon agents",
+    "dependency tracking",
+    "fault recovery",
+    "simulation",
+    "benchmark"
+  ],
+  "code_url": "https://github.com/pooriaarab/benchmark-hundred-step",
+  "artifact_name": "hundred-step-paper.pdf",
+  "source_commit": "44b7e83bb83aca72144617123abeed615638491b"
+}

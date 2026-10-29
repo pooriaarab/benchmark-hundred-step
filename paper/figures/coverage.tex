@@ -1,0 +1,8 @@
+\begin{figure}[t]\centering
+\begin{tikzpicture}\begin{axis}[ybar,bar width=14pt,xlabel={Required logical steps},ylabel={Scheduled faults},xtick={25,50,75,100},ymin=0,legend style={at={(0.02,0.98)},anchor=north west}]
+\addplot[fill=okblue] table[x=length,y=transient,col sep=comma]{data/coverage.generated.csv};
+\addplot[fill=white,pattern=north east lines] table[x=length,y=rollback,col sep=comma]{data/coverage.generated.csv};
+\legend{Transient,Rollback}
+\end{axis}\end{tikzpicture}
+\caption{Longer tasks carry more transient faults, while rollback coverage stays fixed. Counts describe the complete public suite, not sampled rates. All workflow families appear at each length.}\label{fig:coverage}
+\end{figure}

@@ -1,0 +1,10 @@
+\begin{figure}[t]\centering
+\begin{tikzpicture}\begin{axis}[xlabel={Required logical steps},ylabel={Simulated completion (\%)},ymin=0,ymax=110,xtick={25,50,75,100},height=6cm,legend style={at={(0.02,0.03)},anchor=south west}]
+\addplot[black,mark=square*,error bars/.cd,y dir=both,y explicit] table[x=length,y=value,y error minus=low,y error plus=high,col sep=comma]{data/sim0.generated.csv};
+\addplot[okblue,mark=triangle*,error bars/.cd,y dir=both,y explicit] table[x=length,y=value,y error minus=low,y error plus=high,col sep=comma]{data/sim1.generated.csv};
+\addplot[okorange,mark=*,error bars/.cd,y dir=both,y explicit] table[x=length,y=value,y error minus=low,y error plus=high,col sep=comma]{data/sim2.generated.csv};
+\addplot[black,dashed,mark=diamond*,error bars/.cd,y dir=both,y explicit] table[x=length,y=value,y error minus=low,y error plus=high,col sep=comma]{data/sim3.generated.csv};
+\legend{$q=0$,$q=.005$,$q=.01$,$q=.02$}
+\end{axis}\end{tikzpicture}
+\caption{Simulated omissions accumulate with workflow length despite correct fault recovery. Each point uses all tasks at that length across \SeedCount{} simulated seeds. Bars show seed-cluster bootstrap intervals. Disabled recovery produces no completions at any setting; the main text reports this null separately.}\label{fig:simulation}
+\end{figure}

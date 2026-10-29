@@ -5,3 +5,10 @@ artifacts/
 
 .hidden/
 data/tasks.hidden.jsonl
+
+# Rebuilt paper outputs and downloaded style
+paper/*.pdf
+paper/*.log
+paper/*.blg
+paper/*.sty
+paper/.style.zip
