@@ -17,3 +17,13 @@ keywords:
   - llm-evaluation
   - agent-evaluation
   - deterministic-grader
+
+preferred-citation:
+  type: article
+  title: "Hundred Step: Dependency Preservation and Recovery in Long Workflows"
+  authors:
+    - family-names: Arab
+      given-names: Pooria
+      orcid: "https://orcid.org/0009-0005-9964-6841"
+  year: 2026
+  url: "https://github.com/pooriaarab/benchmark-hundred-step/tree/bhun-24-reliability-paper/paper"
